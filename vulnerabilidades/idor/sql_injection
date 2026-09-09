@@ -1,0 +1,77 @@
+<?php
+// Simulación de base de datos con SQLite para SQL Injection
+try {
+    $db = new PDO('sqlite::memory:');
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    $db->exec("CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password TEXT, email TEXT)");
+    $db->exec("INSERT INTO users (username, password, email) VALUES ('admin', 'admin123', 'admin@vunlabs.local')");
+    $db->exec("INSERT INTO users (username, password, email) VALUES ('juan', 'secret1', 'juan@vunlabs.local')");
+    $db->exec("INSERT INTO users (username, password, email) VALUES ('laura', 'qwerty', 'laura@vunlabs.local')");
+
+    $resultado = [];
+    $error = "";
+
+    if (isset($_GET['search'])) {
+        $search = $_GET['search'];
+
+        // ⚠️ VULNERABILIDAD CRÍTICA: Concatenación directa del input
+        $query = "SELECT username, email FROM users WHERE username = '$search'";
+        
+        $stmt = $db->query($query);
+        $resultado = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    $error = "Error: " . $e->getMessage();
+}
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>VunLabs - SQL Injection</title>
+    <style>
+        body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 20px; }
+        h2 { color: #58a6ff; }
+        input { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 8px; }
+        button { background: #238636; color: #fff; border: none; padding: 8px 15px; cursor: pointer; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { border: 1px solid #30363d; padding: 10px; text-align: left; }
+        th { background: #161b22; }
+    </style>
+</head>
+<body>
+    <h2>Laboratorio: Inyección SQL (SQLi)</h2>
+    <p>Busca un usuario por su nombre:</p>
+
+    <form method="GET">
+        <input type="text" name="search" placeholder="Ej. juan" value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
+        <button type="submit">Buscar</button>
+    </form>
+
+    <?php if ($error): ?>
+        <p style="color: red;"><?php echo $error; ?></p>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['search'])): ?>
+        <h3>Resultados:</h3>
+        <?php if (!empty($resultado)): ?>
+            <table>
+                <tr><th>Usuario</th><th>Email</th></tr>
+                <?php foreach ($resultado as $row): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($row['username']); ?></td>
+                        <td><?php echo htmlspecialchars($row['email']); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+        <?php else: ?>
+            <p style="color: #8b949e;">No se encontraron registros.</p>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <br><hr>
+    <a href="../../index.php" style="color: #58a6ff;">&lt;&lt; Volver al inicio</a>
+</body>
+</html>
